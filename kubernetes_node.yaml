@@ -1,0 +1,105 @@
+---
+- hosts: k8s_node
+
+
+  tasks:
+   - name: adding kubernetes.repo
+     shell: |
+       cmd: |
+       cat > /etc/yum.repos.d/kubernetes.repo << EOF
+       [kubernetes]
+       name=Kubernetes
+       baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+       enabled=1
+       gpgcheck=1
+       repo_gpgcheck=1
+       gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+       exclude=kubelet kubeadm kubectl
+
+
+   - name: selinuc=x set to 0
+     command: setenforce 0
+
+
+   - name: editing the selinux config file SELINUX 'enforcing' to 'disabled'
+     lineinfile:
+       path: /etc/selinux/config
+       regexp: '^SELINUX=enforcing'
+       line: SELINUX=disabled
+
+
+   - name: reboot the server and wait for it to come back.
+     reboot:
+
+
+   - name: checking selinux setatus
+     command: sestatus
+     register: result
+
+
+   - name: printing selinux satatus
+     debug: var=result.stdout
+
+
+   - name: installing kubelet, kubeadm, kubectl & enableing kubelet
+     command: '{{item.cmdval}}'
+     with_items:
+      - { cmdval: 'yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes' }
+      - { cmdval: 'systemctl enable --now kubelet' }
+
+
+   - name: adding docker-ce.repo
+     command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+
+   - name: installing docker-celi, docker-ce-cli, containerd.io iptables & git
+     command: '{{item.cmdval}}'
+     with_items:
+      - { cmdval: 'yum install docker-ce docker-ce-cli containerd.io --nobest -y' }
+      - { cmdval: 'yum install iptables -y' }
+      - { cmdval: 'yum install git -y' }
+
+
+   - name: Check for the docker version
+     command: docker --version
+     register: result
+
+
+   - name: printing docker version
+     debug: var=result.stdout
+
+
+   - name:  enable, starting docker, daemon_reload & restart kublete
+     command: '{{item.cmdval}}'
+     with_items:
+       - { cmdval: 'systemctl enable docker'}
+       - { cmdval: 'systemctl start docker'}
+       - { cmdval: 'systemctl daemon-reload'}
+       - { cmdval: 'systemctl restart kubelet'}
+
+
+   - name: connecting to master
+     command: "
+     register: result
+
+
+   - name: printing connection status
+     debug: var=result.stdout
+
+
+- hosts: k8s_master
+
+  tasks:
+
+
+   - name: wait for 30 seconds and continue
+     wait_for: timeout=30
+
+
+   - name: checking node status
+     command: kubectl get node
+     register: result
+
+
+  - name: printing node status
+    debug: var=result.stdout
