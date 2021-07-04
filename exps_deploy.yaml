@@ -23,7 +23,7 @@ kind: Service
 metadata:
   name: expensetracker-service
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
     - targetPort: 8080
       port: 8080
