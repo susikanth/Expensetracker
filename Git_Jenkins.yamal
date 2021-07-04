@@ -1,0 +1,62 @@
+---
+- hosts: localhost
+
+
+  tasks:
+    - name: installing git, wget, java
+      yum:
+        name: '{{item.packval}}'
+        state: present
+      with_items:
+        - { packval: 'git' }
+        - { packval: 'wget'}
+        - { packval: 'java'}
+
+
+    - name: adding jenkins.repo & Updating io key
+      command: '{{item.cmdval}}'
+      with_items:
+        - { cmdval: 'wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins.io/redhat-stable/jenkins.repo'}
+        - { cmdval: 'rpm --import http://pkg.jenkins.io/redhat-stable/jenkins.io.key'}
+
+
+    - name: install jenkins
+      yum: name=jenkins state=present
+
+
+    - name: editing the config file port '8080' to '8085'
+      lineinfile:
+        path: /etc/sysconfig/jenkins
+        regexp: '^JENKINS_PORT'
+        line: JENKINS_PORT=8085
+
+
+    - name: starting jenkins enable & start
+      command: '{{item.cmdval}}'
+      with_items:
+        - { cmdval: 'systemctl enable jenkins'}
+        - { cmdval: 'systemctl start jenkins'}
+
+
+
+    - name: check jsenkins status	
+      command: service jenkins status
+      register: result
+
+
+    - name: printing jenkins status
+      debug: var=result.stdout
+
+
+    - name: wait for 30 seconds and continue
+      wait_for: timeout=30
+  
+
+    - name: init password jenkin
+      command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: result
+
+
+    - name: print init password jenkins
+      debug:
+       var: result.stdout
