@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: expensetracker
-          image: loveisall/expensetracker:latest
+          image: susikanth/expensetracker:latest
           ports:
             - containerPort: 8080
 ---
